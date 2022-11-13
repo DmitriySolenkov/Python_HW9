@@ -1,4 +1,6 @@
 import random
+from fractions import Fraction
+from numbers import Complex
 from aiogram.dispatcher import FSMContext
 from aiogram import Bot, types
 from aiogram.dispatcher import Dispatcher
@@ -16,11 +18,27 @@ class UserState(StatesGroup):
     waiting_turn = State()
     waiting_sweets_mode = State()
     sweets_players_turn = State()
-    sweets_bots_turn = State()
+    calc_mode = State()
+    calc_comp_num = State()
+    calc_rat_num = State()
+    calc_rat_action = State()
+    calc_comp_action = State()
+    calc_result = State()
 
+
+button_rat_calc = KeyboardButton('Рациональные числа')
+button_comp_calc = KeyboardButton('Комплексные числа')
+
+button_action_add = KeyboardButton('+')
+button_action_sub = KeyboardButton('-')
+button_action_mult = KeyboardButton('*')
+button_action_div = KeyboardButton('/')
+button_action = KeyboardButton('Ответ')
 
 button_play_sweets = KeyboardButton('/sweets')
 button_play_tictactoe = KeyboardButton('/tictactoe')
+button_calculator = KeyboardButton('/calculator')
+
 button_00 = KeyboardButton('0 0')
 button_01 = KeyboardButton('0 1')
 button_02 = KeyboardButton('0 2')
@@ -41,8 +59,18 @@ button_sweets_4 = KeyboardButton('4 конфеты')
 button_sweets_5 = KeyboardButton('5 конфет')
 button_sweets_6 = KeyboardButton('6 конфет')
 
+result_kb = ReplyKeyboardMarkup(resize_keyboard=True)
+result_kb.add(button_action)
+
+action_kb = ReplyKeyboardMarkup(resize_keyboard=True)
+action_kb.add(button_action_add, button_action_sub,
+              button_action_mult, button_action_div)
+
 game_kb = ReplyKeyboardMarkup(resize_keyboard=True)
-game_kb.add(button_play_sweets, button_play_tictactoe)
+game_kb.add(button_play_sweets, button_play_tictactoe, button_calculator)
+
+calc_mode_kb = ReplyKeyboardMarkup(resize_keyboard=True)
+calc_mode_kb.add(button_rat_calc, button_comp_calc)
 
 place_kb = ReplyKeyboardMarkup(resize_keyboard=True)
 place_kb.add(button_00, button_01, button_02, button_10,
@@ -58,6 +86,131 @@ sweets_amount_kb.add(button_sweets_1, button_sweets_2, button_sweets_3,
 storage = MemoryStorage()
 bot = Bot(token='5738278172:AAHOz4wDCqEiTnR-LLBDXpDEtnwDwAm0PUw')
 dp = Dispatcher(bot, storage=storage)
+
+first_num = 0
+action = 'a'
+second_num = 0
+
+
+@dp.message_handler(commands=['calculator'])
+async def calc_start(message: types.Message):
+    await message.answer("Сейчас все посчитаем!")
+    await message.answer(f'Выберите режим калькулятора:', reply_markup=calc_mode_kb)
+    await UserState.calc_mode.set()
+
+
+@dp.message_handler(state=UserState.calc_mode)
+async def calc_mode(message: types.Message, state: FSMContext):
+    if message.text == 'Рациональные числа':
+        await message.answer("Работаем с рациональными числами!")
+        await message.answer("Введите первую дробь через /:")
+        await UserState.calc_rat_num.set()
+    elif message.text == 'Комплексные числа':
+        await message.answer("Работаем с комплексными числами!")
+        await message.answer("Введите коэффициенты первого числа через пробел:")
+        await UserState.calc_comp_num.set()
+    else:
+        await message.answer(f'Я вас не понимаю, выберите режим калькулятора:', reply_markup=calc_mode_kb)
+
+
+@dp.message_handler(state=UserState.calc_comp_num)
+async def calc_comp_num(message: types.Message, state: FSMContext):
+    global first_num
+    global second_num
+    num = list(message.text.split(' '))
+    check = True
+    if len(num) != 2:
+        await message.answer("Неверно введены коэффициенты, попробуйте еще раз (через пробел)")
+    else:
+        if num[0].isdigit() == True:
+            if num[1].isdigit() == True:
+                check == True
+            else:
+                check = False
+        else:
+            check = False
+        if check == False:
+            await message.answer("Неверно введены коэффициенты, попробуйте еще раз (через пробел)")
+        else:
+            print(num)
+            if first_num == 0:
+                first_num = complex(int(num[0]), int(num[1]))
+                await message.answer(f'Выберите действие:', reply_markup=action_kb)
+                await UserState.calc_comp_action.set()
+            else:
+                second_num = complex(int(num[0]), int(num[1]))
+                await message.answer(f'Нажмите на кнопку для расчета:', reply_markup=result_kb)
+                await UserState.calc_result.set()
+
+@dp.message_handler(state=UserState.calc_comp_action)
+async def calc__compaction(message: types.Message, state: FSMContext):
+    global action
+    if message.text == '+' or message.text == '-' or message.text == '/' or message.text == '*':
+        action = message.text
+        await message.answer("Введите коэффициенты второга числа через пробел:")
+        await UserState.calc_comp_num.set()
+    else:
+        await message.answer(f'Не понимаю вас, выберите действие:', reply_markup=action_kb)
+
+@dp.message_handler(state=UserState.calc_rat_num)
+async def calc_num_rat(message: types.Message, state: FSMContext):
+    global first_num
+    global second_num
+    num = list(message.text.split('/'))
+    check = True
+    if len(num) != 2:
+        await message.answer("Неверно введена дробь, попробуйте еще раз (через /)")
+    else:
+        if num[0].isdigit() == True:
+            if num[1].isdigit() == True:
+                check == True
+            else:
+                check = False
+        else:
+            check = False
+        if check == False:
+            await message.answer("Неверно введена дробь, попробуйте еще раз (через /)")
+        else:
+            if int(num[0]) == 0 or int(num[1]) == 0:
+                await message.answer("Не работаю с нулями, попробуйте еще раз (через /)")
+            else:
+                if first_num == 0:
+                    first_num = Fraction(int(num[0]), int(num[1]))
+                    await message.answer(f'Выберите действие:', reply_markup=action_kb)
+                    await UserState.calc_rat_action.set()
+                else:
+                    second_num = Fraction(int(num[0]), int(num[1]))
+                    await message.answer(f'Нажмите на кнопку для расчета:', reply_markup=result_kb)
+                    await UserState.calc_result.set()
+
+
+@dp.message_handler(state=UserState.calc_rat_action)
+async def calc_action(message: types.Message, state: FSMContext):
+    global action
+    if message.text == '+' or message.text == '-' or message.text == '/' or message.text == '*':
+        action = message.text
+        await message.answer("Введите вторую дробь через /:")
+        await UserState.calc_rat_num.set()
+    else:
+        await message.answer(f'Не понимаю вас, выберите действие:', reply_markup=action_kb)
+
+
+@dp.message_handler(state=UserState.calc_result)
+async def calc_result(message: types.Message, state: FSMContext):
+    global first_num
+    global second_num
+    res = 0
+    match action:
+        case '+': res = first_num + second_num
+        case '-': res = first_num - second_num
+        case '*': res = first_num * second_num
+        case '/': res = first_num / second_num
+    first_num = 0
+    second_num = 0
+    await message.answer(f'Ответ:{res}')
+    await state.finish()
+    await message.answer(f"Выберите, во что хотите поиграть:", reply_markup=game_kb)
+
 
 sweets_count = 0
 sweetsMode = 0
@@ -226,7 +379,7 @@ async def turn(message: types.Message, state: FSMContext):
                         await message.answer(f'{players[count%2]} победил!')
                         await state.finish()
                         await message.answer(f"Выберите, во что хотите поиграть:", reply_markup=game_kb)
-                    elif drawCheck(cell)== True:
+                    elif drawCheck(cell) == True:
                         await message.answer('Ничья!')
                         await state.finish()
                         await message.answer(f"Выберите, во что хотите поиграть:", reply_markup=game_kb)
@@ -270,7 +423,7 @@ def winCheck(cell):
 
 def drawCheck(cell):
     if winCheck(cell) == False:
-        if cell[0][0] != '-' and cell[0][1] != '-' and cell[0][2] != '-' and cell[1][0] != '-' and cell[1][1] != '-' and cell[1][2] != '-' and cell[2][0] != '-' and cell[2][1] != '-' and cell[2][2] != '-':\
+        if cell[0][0] != '-' and cell[0][1] != '-' and cell[0][2] != '-' and cell[1][0] != '-' and cell[1][1] != '-' and cell[1][2] != '-' and cell[2][0] != '-' and cell[2][1] != '-' and cell[2][2] != '-':
             return True
         else:
             return False
