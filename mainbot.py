@@ -84,7 +84,7 @@ sweets_amount_kb.add(button_sweets_1, button_sweets_2, button_sweets_3,
                      button_sweets_4, button_sweets_5, button_sweets_6)
 
 storage = MemoryStorage()
-bot = Bot(token='5738278172:AAHOz4wDCqEiTnR-LLBDXpDEtnwDwAm0PUw')
+bot = Bot(token='ващ токен')
 dp = Dispatcher(bot, storage=storage)
 
 first_num = 0
@@ -142,6 +142,7 @@ async def calc_comp_num(message: types.Message, state: FSMContext):
                 await message.answer(f'Нажмите на кнопку для расчета:', reply_markup=result_kb)
                 await UserState.calc_result.set()
 
+
 @dp.message_handler(state=UserState.calc_comp_action)
 async def calc__compaction(message: types.Message, state: FSMContext):
     global action
@@ -151,6 +152,7 @@ async def calc__compaction(message: types.Message, state: FSMContext):
         await UserState.calc_comp_num.set()
     else:
         await message.answer(f'Не понимаю вас, выберите действие:', reply_markup=action_kb)
+
 
 @dp.message_handler(state=UserState.calc_rat_num)
 async def calc_num_rat(message: types.Message, state: FSMContext):
